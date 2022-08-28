@@ -40,15 +40,18 @@ func GetInstanceID() (string, error) {
 }
 
 func ToHTML(value string) string {
-	return fmt.Sprintf(`<!DOCTYPE html>
-<html>
-  <head>
-    <title>AWS SAA Labs</title>
-  </head>
-  <body>
-    <h1>%s</h1>
-  </body>
-</html>`, value)
+	return fmt.Sprintf(
+		"<!DOCTYPE html>" +
+			"<html>\n" +
+			"  <head>\n" +
+			"    <title>AWS SAA Labs</title>\n" +
+			"  </head>\n" +
+			"  <body>\n" +
+			"    <h1>%s</h1>\n" +
+			"  </body>\n" +
+			"</html>\n",
+		value,
+	)
 }
 EOT
 
