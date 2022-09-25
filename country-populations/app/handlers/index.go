@@ -1,7 +1,7 @@
 package handlers
 
 import (
-	"country-populations/db"
+	"country-populations/app/db"
 	"fmt"
 	"github.com/joerdav/zapray"
 	"go.uber.org/zap"

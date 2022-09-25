@@ -1,7 +1,7 @@
 package main
 
 import (
-	"country-populations/db"
+	"country-populations/app/db"
 	"fmt"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"

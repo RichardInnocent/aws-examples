@@ -1,0 +1,13 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: An AWS Lambda application that calls the Lambda API.
+Resources:
+  GetCountryPopulationFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: "get-population-by-country"
+      Description: Gets populations by country
+      Runtime: go1.x
+      CodeUri: ./app/handlers/get
+      Handler: main
+      Timeout: 5

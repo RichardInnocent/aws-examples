@@ -25,7 +25,26 @@ The application can be accessed by visiting http://localhost:8080
 
 To switch between countries, set the country in the query parameters, e.g.:
 ```
-localhost:8080?country=spain
+http://localhost:8080?country=spain
 ```
 
-For the full list of supported countries, see [this file](local/main.go).
+For the full list of supported countries, see [this file](app/local/main.go).
+
+## Deploying as a Lambda function
+### Set the credentials
+Grab the credentials for the account, put them in [oo-set-credentials.sh](00-set-credentials.sh)
+and then run it.
+
+### Bootstrap the environment
+The environment needs to be bootstrapped so that CDK CF deployments can run. You only need to do
+this once per account.
+
+```shell
+cdk bootstrap
+```
+
+### Run the CDK deployment
+```shell
+cd cdk
+cdk deploy
+```
