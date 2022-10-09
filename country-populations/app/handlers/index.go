@@ -21,7 +21,7 @@ func NewIndexHandler(logger *zapray.Logger, store db.DynamoDBPopulationStore) In
 }
 
 func (h IndexHandler) ServeHTTP(responseWriter http.ResponseWriter, request *http.Request) {
-	if request.URL.Path != "/" {
+	if request.URL.Path != "/" || request.URL.Path != "" {
 		h.logger.Warn("received request for unsupported path", zap.String("path", request.URL.Path))
 		responseWriter.WriteHeader(404)
 		return
