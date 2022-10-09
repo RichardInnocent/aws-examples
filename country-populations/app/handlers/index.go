@@ -49,6 +49,7 @@ func (h IndexHandler) ServeHTTP(responseWriter http.ResponseWriter, request *htt
 		populationPtr = &population
 	}
 
+	responseWriter.Header().Set("Content-Type", "text/html")
 	_, err = responseWriter.Write([]byte(h.buildModel(country, populationPtr)))
 
 	if err != nil {
@@ -61,8 +62,7 @@ func (h IndexHandler) ServeHTTP(responseWriter http.ResponseWriter, request *htt
 }
 
 func (h IndexHandler) buildModel(countryName string, population *int64) string {
-	return fmt.Sprintf(`
-<!DOCTYPE html>
+	return fmt.Sprintf(`<!DOCTYPE html>
 <html>
   <head>
     <title>Country Populations</title>
@@ -76,7 +76,7 @@ func (h IndexHandler) buildModel(countryName string, population *int64) string {
         border: 2px solid black;
         margin-top: 3em;"
     >
-  	  <h1
+      <h1
            style="margin-top: 0;
            margin-bottom: 0.5em;
            padding: 0.5em;
@@ -87,7 +87,7 @@ func (h IndexHandler) buildModel(countryName string, population *int64) string {
       >
         %s
       </h1>
-  	  <p style="font-size: 1.5em;">Population: %s</p>
+      <p style="font-size: 1.5em;">Population: %s</p>
     </main>
   </body>
 </html>
