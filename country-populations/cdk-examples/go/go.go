@@ -39,7 +39,7 @@ func NewGoStack(scope constructs.Construct, id string, props *GoStackProps) awsc
 	)
 
 	countryPopulationsTable := awsdynamodb.NewTable(
-		scope,
+		stack,
 		jsii.String("country-populations-table"),
 		&awsdynamodb.TableProps{
 			TableName: jsii.String("country-populations"),
@@ -55,12 +55,17 @@ func NewGoStack(scope constructs.Construct, id string, props *GoStackProps) awsc
 	countryPopulationsTable.GrantReadData(getPopulationByCountryFunction)
 
 	apiGateway := awsapigateway.NewLambdaRestApi(
-		scope,
+		stack,
 		jsii.String("api-gateway"),
 		&awsapigateway.LambdaRestApiProps{
-			Handler: getPopulationByCountryFunction,
+			Handler:     getPopulationByCountryFunction,
+			RestApiName: jsii.String("country-populations"),
+			EndpointTypes: &[]awsapigateway.EndpointType{
+				awsapigateway.EndpointType_REGIONAL,
+			},
 		},
 	)
+
 	countriesGetIntegration := awsapigateway.NewLambdaIntegration(
 		getPopulationByCountryFunction,
 		&awsapigateway.LambdaIntegrationOptions{},
@@ -79,7 +84,7 @@ func main() {
 
 	app := awscdk.NewApp(nil)
 
-	NewGoStack(app, "GoStack", &GoStackProps{
+	NewGoStack(app, "country-populations", &GoStackProps{
 		awscdk.StackProps{
 			Env: env(),
 		},
