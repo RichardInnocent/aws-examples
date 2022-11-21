@@ -53,3 +53,11 @@ aws dynamodb query \
   --key-condition-expression "gsi1 = :gsi1" \
   --expression-attribute-values '{":gsi1": {"S": "postcode/BN761FG"}}'
 ```
+
+### Performing table scan
+```shell
+aws dynamodb scan \
+  --table-name userAddresses \
+  --filter-expression "addressLine1 = :addressLine1" \
+  --expression-attribute-values '{":addressLine1": {"S": "2 Beach Avenue"}}'
+```
