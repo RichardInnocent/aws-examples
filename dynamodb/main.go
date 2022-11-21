@@ -1,9 +1,11 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"github.com/aws/aws-sdk-go/aws/session"
-	"github.com/aws/aws-sdk-go/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/config"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"strconv"
 )
 
@@ -24,88 +26,106 @@ type AddressItem struct {
 }
 
 func main() {
-	sess := session.Must(session.NewSessionWithOptions(session.Options{
-		SharedConfigState: session.SharedConfigEnable,
-	}))
-
 	tableName := "userAddresses"
+	ctx := context.Background()
 
-	dynamoDBService := dynamodb.New(sess)
-	if err := createTable(tableName, dynamoDBService); err != nil {
+	cfg, err := config.LoadDefaultConfig(ctx)
+	if err != nil {
+		panic(fmt.Errorf("could not create config: %w", err))
+	}
+	dynamoDBClient := dynamodb.NewFromConfig(cfg)
+	if err := createTableIfNotExists(ctx, tableName, dynamoDBClient); err != nil {
 		panic(fmt.Errorf("could not create DynamoDB table: %w", err))
 	}
-	if err := populateTable(tableName, dynamoDBService); err != nil {
+	if err := populateTable(tableName, dynamoDBClient); err != nil {
 		panic(fmt.Errorf("could not populate table: %w", err))
 	}
 }
 
-func createTable(tableName string, dynamoDBService *dynamodb.DynamoDB) error {
+func createTableIfNotExists(
+	ctx context.Context,
+	tableName string,
+	dynamoDBClient *dynamodb.Client,
+) error {
+	_, describeErr := dynamoDBClient.DescribeTable(
+		ctx,
+		&dynamodb.DescribeTableInput{TableName: addressOfString(tableName)},
+	)
+	if describeErr == nil {
+		fmt.Println("Table already exists. Skipping...")
+		return nil
+	}
+	fmt.Printf("Could not describe the table: %v\nAttempting to create table...\n", describeErr)
 	createTableInput := &dynamodb.CreateTableInput{
-		AttributeDefinitions: []*dynamodb.AttributeDefinition{
+		AttributeDefinitions: []types.AttributeDefinition{
 			{
 				AttributeName: addressOfString(partitionKeyAttributeName), // partition key
-				AttributeType: addressOfString("S"),
+				AttributeType: types.ScalarAttributeTypeS,
 			},
 			{
 				AttributeName: addressOfString(sortKeyAttributeName), // sort key
-				AttributeType: addressOfString("S"),
+				AttributeType: types.ScalarAttributeTypeS,
 			},
 			{
 				AttributeName: addressOfString(lsi1AttributeName), // LSI
-				AttributeType: addressOfString("S"),
+				AttributeType: types.ScalarAttributeTypeS,
 			},
 			{
 				AttributeName: addressOfString(gsi1AttributeName), // GSI
-				AttributeType: addressOfString("S"),
+				AttributeType: types.ScalarAttributeTypeS,
 			},
 		},
-		BillingMode: addressOfString("PAY_PER_REQUEST"),
-		KeySchema: []*dynamodb.KeySchemaElement{
+		BillingMode: types.BillingModePayPerRequest,
+		KeySchema: []types.KeySchemaElement{
 			{
 				AttributeName: addressOfString(partitionKeyAttributeName),
-				KeyType:       addressOfString("HASH"),
+				KeyType:       types.KeyTypeHash,
 			},
 			{
 				AttributeName: addressOfString(sortKeyAttributeName),
-				KeyType:       addressOfString("RANGE"),
+				KeyType:       types.KeyTypeRange,
 			},
 		},
-		GlobalSecondaryIndexes: []*dynamodb.GlobalSecondaryIndex{
+		GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
 			{
 				IndexName: addressOfString("postcode"),
-				KeySchema: []*dynamodb.KeySchemaElement{
+				KeySchema: []types.KeySchemaElement{
 					{
 						AttributeName: addressOfString(gsi1AttributeName),
-						KeyType:       addressOfString("S"),
+						KeyType:       types.KeyTypeHash,
 					},
 				},
-				Projection: &dynamodb.Projection{
-					ProjectionType: addressOfString(dynamodb.ProjectionTypeKeysOnly),
+				Projection: &types.Projection{
+					ProjectionType: types.ProjectionTypeKeysOnly,
 				},
 			},
 		},
-		LocalSecondaryIndexes: []*dynamodb.LocalSecondaryIndex{
+		LocalSecondaryIndexes: []types.LocalSecondaryIndex{
 			{
 				IndexName: addressOfString("country"),
-				KeySchema: []*dynamodb.KeySchemaElement{
+				KeySchema: []types.KeySchemaElement{
+					{
+						AttributeName: addressOfString(partitionKeyAttributeName),
+						KeyType:       types.KeyTypeHash,
+					},
 					{
 						AttributeName: addressOfString(lsi1AttributeName),
-						KeyType:       addressOfString("S"),
+						KeyType:       types.KeyTypeRange,
 					},
 				},
-				Projection: &dynamodb.Projection{
-					ProjectionType: addressOfString(dynamodb.ProjectionTypeKeysOnly),
+				Projection: &types.Projection{
+					ProjectionType: types.ProjectionTypeKeysOnly,
 				},
 			},
 		},
-		TableClass: addressOfString("STANDARD"),
+		TableClass: types.TableClassStandard,
 		TableName:  addressOfString(tableName),
 	}
-	_, err := dynamoDBService.CreateTable(createTableInput)
+	_, err := dynamoDBClient.CreateTable(ctx, createTableInput)
 	return err
 }
 
-func populateTable(tableName string, dynamoDBService *dynamodb.DynamoDB) error {
+func populateTable(tableName string, dynamoDBService *dynamodb.Client) error {
 	items := []AddressItem{
 		{
 			userId:           "1",
@@ -204,25 +224,45 @@ func populateTable(tableName string, dynamoDBService *dynamodb.DynamoDB) error {
 	return nil
 }
 
-func insertItem(tableName string, dynamoDBService *dynamodb.DynamoDB, item AddressItem) error {
-	_, err := dynamoDBService.PutItem(&dynamodb.PutItemInput{
-		ExpressionAttributeNames:  nil,
-		ExpressionAttributeValues: nil,
-		Item: map[string]*dynamodb.AttributeValue{
-			partitionKeyAttributeName: {S: addressOfString("userId/" + item.userId)},
-			sortKeyAttributeName:      {S: addressOfString("year/" + strconv.Itoa(item.yearOfOccupation))},
-			gsi1AttributeName:         {S: addressOfString("postcode/" + item.postcode)},
-			lsi1AttributeName:         {S: addressOfString("country/" + item.country)},
-			"userId":                  {S: addressOfString(item.userId)},
-			"yearOfOccupation":        {N: addressOfString(strconv.Itoa(item.yearOfOccupation))},
-			"addressLine1":            {S: addressOfString(item.addressLine1)},
-			"addressLine2":            {S: addressOfString(item.addressLine2)},
-			"postcode":                {S: addressOfString(item.postcode)},
-			"country":                 {S: addressOfString(item.country)},
+func insertItem(tableName string, dynamoDBService *dynamodb.Client, item AddressItem) error {
+	_, err := dynamoDBService.PutItem(context.Background(),
+		&dynamodb.PutItemInput{
+			TableName: addressOfString(tableName),
+			Item: map[string]types.AttributeValue{
+				partitionKeyAttributeName: &types.AttributeValueMemberS{
+					Value: "userId/" + item.userId,
+				},
+				sortKeyAttributeName: &types.AttributeValueMemberS{
+					Value: "year/" + strconv.Itoa(item.yearOfOccupation),
+				},
+				gsi1AttributeName: &types.AttributeValueMemberS{
+					Value: "postcode/" + item.postcode,
+				},
+				lsi1AttributeName: &types.AttributeValueMemberS{
+					Value: "country/" + item.country,
+				},
+				"userId": &types.AttributeValueMemberS{
+					Value: item.userId,
+				},
+				"yearOfOccupation": &types.AttributeValueMemberS{
+					Value: strconv.Itoa(item.yearOfOccupation),
+				},
+				"addressLine1": &types.AttributeValueMemberS{
+					Value: item.addressLine1,
+				},
+				"addressLine2": &types.AttributeValueMemberS{
+					Value: item.addressLine2,
+				},
+				"postcode": &types.AttributeValueMemberS{
+					Value: item.postcode,
+				},
+				"country": &types.AttributeValueMemberS{
+					Value: item.country,
+				},
+			},
+			ReturnValues: types.ReturnValueNone,
 		},
-		ReturnValues: nil,
-		TableName:    addressOfString(tableName),
-	})
+	)
 	return err
 }
 
