@@ -7,6 +7,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb/types"
 	"strconv"
+	"time"
 )
 
 const (
@@ -88,7 +89,7 @@ func createTableIfNotExists(
 		},
 		GlobalSecondaryIndexes: []types.GlobalSecondaryIndex{
 			{
-				IndexName: addressOfString("postcode"),
+				IndexName: addressOfString("gsi1"),
 				KeySchema: []types.KeySchemaElement{
 					{
 						AttributeName: addressOfString(gsi1AttributeName),
@@ -102,7 +103,7 @@ func createTableIfNotExists(
 		},
 		LocalSecondaryIndexes: []types.LocalSecondaryIndex{
 			{
-				IndexName: addressOfString("country"),
+				IndexName: addressOfString("lsi1"),
 				KeySchema: []types.KeySchemaElement{
 					{
 						AttributeName: addressOfString(partitionKeyAttributeName),
@@ -122,6 +123,13 @@ func createTableIfNotExists(
 		TableName:  addressOfString(tableName),
 	}
 	_, err := dynamoDBClient.CreateTable(ctx, createTableInput)
+
+	if err != nil {
+		fmt.Println(
+			"Sleeping for 5 seconds to give the table some time to create before inserting items",
+		)
+		time.Sleep(5 * time.Second)
+	}
 	return err
 }
 
@@ -172,6 +180,7 @@ func populateTable(tableName string, dynamoDBService *dynamodb.Client) error {
 			yearOfOccupation: 2019,
 			addressLine1:     "64 Valencia Place",
 			addressLine2:     "Minnert",
+			postcode:         "ES94NI07",
 			country:          "Spain",
 		},
 		{
