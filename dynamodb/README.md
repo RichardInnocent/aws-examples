@@ -36,7 +36,7 @@ aws dynamodb query \
   --expression-attribute-values '{":pk": {"S": "userId/1"}, ":start": {"S": "year/2015"}, ":end": {"S": "year/2021"}}'
 ```
 
-### Getting by partition key and sort key range
+### Getting by local secondary index
 ```shell
 aws dynamodb query \
   --table-name userAddresses \
